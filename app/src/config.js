@@ -4,7 +4,7 @@ import Constants from 'expo-constants';
 //
 // After deploying the server online (Step 4), put its https:// address here.
 // While this is empty, the app finds your laptop by itself (see below).
-const ONLINE_SERVER_URL = '';
+const ONLINE_SERVER_URL = 'https://hide-and-seek-server-pzkm.onrender.com';
 
 // During development, Expo Go loads the app from your laptop, so it already
 // knows the laptop's IP (e.g. "10.189.34.90:8081"). We reuse that IP for the
