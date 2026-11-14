@@ -1,0 +1,30 @@
+// Distance helpers for real-world GPS coordinates.
+
+const EARTH_RADIUS_M = 6371000;
+const toRad = (deg) => (deg * Math.PI) / 180;
+
+// Haversine formula: distance in metres between two { lat, lng } points.
+function distanceMeters(a, b) {
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(h));
+}
+
+function isValidCoord(p) {
+  return (
+    p &&
+    Number.isFinite(p.lat) &&
+    Number.isFinite(p.lng) &&
+    Math.abs(p.lat) <= 90 &&
+    Math.abs(p.lng) <= 180
+  );
+}
+
+function isInsideZone(point, zone) {
+  return distanceMeters(point, zone.center) <= zone.radius;
+}
+
+module.exports = { distanceMeters, isValidCoord, isInsideZone };
