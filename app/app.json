@@ -28,7 +28,10 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Pursuit shares your location with your team and the game while you play."
+          "locationWhenInUsePermission": "Pursuit shares your location with your team and the game while you play.",
+          "isAndroidForegroundServiceEnabled": true,
+          "isAndroidBackgroundLocationEnabled": false
+
         }
       ]
     ],

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { io } from 'socket.io-client';
 import { SERVER_URL } from './config';
+import { setLiveSocket } from './backgroundLocation';
 
 const SESSION_KEY = 'pursuit:session';
 
@@ -57,6 +58,7 @@ export function useGame() {
       reconnectionDelayMax: 5000,
     });
     socketRef.current = s;
+    setLiveSocket(s); // background task sends through it while it's connected
 
     s.on('connect', async () => {
       setConnected(true);
@@ -97,6 +99,7 @@ export function useGame() {
 
     return () => {
       cancelled = true;
+      setLiveSocket(null);
       s.disconnect();
     };
   }, [saveSession, showToast]);

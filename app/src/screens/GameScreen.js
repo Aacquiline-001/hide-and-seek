@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useKeepAwake } from 'expo-keep-awake';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import GameMap from '../GameMap';
 import { Button, Sheet, Eyebrow, Title, Muted, fmtClock } from '../ui';
 import { colors } from '../config';
@@ -14,10 +14,15 @@ function useNow(serverNow) {
   return now;
 }
 
-export default function GameScreen({ game, me, position, locationError, teammates, ping, toast, serverNow, actions }) {
-  // Keep the screen on during the game so GPS keeps flowing.
-  // (Step 3 adds background location so the phone can be locked.)
-  useKeepAwake();
+export default function GameScreen({ game, me, position, locationError, teammates, ping, toast, serverNow, backgroundOn, actions }) {
+  // Without background tracking (e.g. in Expo Go), GPS stops when the screen
+  // locks, so keep the screen on. With it, players can lock their phones.
+  useEffect(() => {
+    if (backgroundOn || game.status === 'ended') return undefined;
+    const tag = 'pursuit-game';
+    activateKeepAwakeAsync(tag).catch(() => {});
+    return () => deactivateKeepAwake(tag);
+  }, [backgroundOn, game.status]);
   const now = useNow(serverNow);
   const [recenterKey, setRecenterKey] = useState(0);
   const [tagging, setTagging] = useState(null);
@@ -179,6 +184,13 @@ export default function GameScreen({ game, me, position, locationError, teammate
 
         {message && <Text style={styles.msg}>{message}</Text>}
         {locationError && <Text style={styles.msg}>{locationError}</Text>}
+        {!ended && (
+          <Muted style={{ fontSize: 13, marginTop: 8 }}>
+            {backgroundOn
+              ? '🔒 You can lock your phone. Your location keeps updating.'
+              : '⚠ Keep this screen open. Your location stops if the phone locks.'}
+          </Muted>
+        )}
 
         {!ended && (
           <View style={styles.footer}>

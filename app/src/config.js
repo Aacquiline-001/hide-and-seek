@@ -20,7 +20,7 @@ export const SERVER_URL = ONLINE_SERVER_URL || laptopServerUrl() || 'http://loca
 
 // How often we send our GPS position to the server.
 export const LOCATION_INTERVAL_MS = 3000;
-export const LOCATION_DISTANCE_M = 5;
+export const LOCATION_DISTANCE_M = 0;
 
 export const colors = {
   red: '#E8202A',

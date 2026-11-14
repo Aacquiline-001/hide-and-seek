@@ -8,6 +8,7 @@ const { Game, makeCode } = require('./game');
 const PORT = process.env.PORT || 3000;
 const app = express();
 app.use(cors());
+app.use(express.json({ limit: '10kb' }));
 
 const games = new Map(); // code -> Game
 
@@ -25,6 +26,45 @@ function broadcastState(game) {
   }
 }
 
+// One place that handles a GPS fix, whether it came over the live socket
+// or as a plain web request from a phone tracking in the background.
+const lastFixAt = new Map(); // playerId -> time of last accepted fix
+function handleLocation(game, playerId, loc) {
+  const now = Date.now();
+  // Ignore floods: at most one update per second per player.
+  if (now - (lastFixAt.get(playerId) || 0) < 1000) return { throttled: true };
+
+  const wasOutside = game.players.get(playerId)?.outsideZone;
+  const p = game.updateLocation(playerId, loc, now); // throws on bad input
+  lastFixAt.set(playerId, now); // only count fixes that were accepted
+  // Only teammates see live positions, so send just to them.
+  for (const other of game.players.values()) {
+    if (other.id !== playerId && other.role === p.role) {
+      io.to(`player:${other.id}`).emit('player:moved', {
+        id: p.id,
+        location: { lat: p.location.lat, lng: p.location.lng },
+      });
+    }
+  }
+  if (p.outsideZone !== wasOutside) broadcastState(game);
+  return {};
+}
+
+// Background location from phones whose live connection is asleep.
+// playerId is a random secret only that player's phone knows.
+app.post('/api/location', (req, res) => {
+  const { code, playerId, lat, lng, accuracy } = req.body || {};
+  const game = games.get(String(code || '').toUpperCase());
+  if (!game || !game.players.has(playerId)) {
+    return res.status(404).json({ ok: false, error: 'Game or player not found' });
+  }
+  try {
+    res.json({ ok: true, ...handleLocation(game, playerId, { lat, lng, accuracy }) });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
 // Wrap handlers so errors go back to the caller instead of crashing the server.
 function handler(socket, fn) {
   return (payload = {}, ack) => {
@@ -41,7 +81,6 @@ io.on('connection', (socket) => {
   // Set once the socket creates, joins or rejoins a game.
   let game = null;
   let playerId = null;
-  let lastLocationAt = 0;
 
   function attach(g, id) {
     game = g;
@@ -122,22 +161,7 @@ io.on('connection', (socket) => {
 
   socket.on('location:update', handler(socket, (loc) => {
     requireGame();
-    // Ignore floods: at most one update per second per player.
-    const now = Date.now();
-    if (now - lastLocationAt < 1000) return { throttled: true };
-    lastLocationAt = now;
-    const wasOutside = game.players.get(playerId)?.outsideZone;
-    const p = game.updateLocation(playerId, loc, now);
-    // Only teammates see live positions, so send just to them.
-    for (const other of game.players.values()) {
-      if (other.id !== playerId && other.role === p.role) {
-        io.to(`player:${other.id}`).emit('player:moved', {
-          id: p.id,
-          location: { lat: p.location.lat, lng: p.location.lng },
-        });
-      }
-    }
-    if (p.outsideZone !== wasOutside) broadcastState(game);
+    return handleLocation(game, playerId, loc);
   }));
 
   socket.on('game:tag', handler(socket, ({ runnerId }) => {
