@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button, Sheet, Eyebrow, Title, Muted } from '../ui';
-import { colors } from '../config';
+import { colors,SERVER_URL } from '../config';
 
 const NAME_KEY = 'pursuit:name';
 
@@ -86,7 +86,7 @@ export default function HomeScreen({ connected, actions }) {
         )}
 
         <Muted style={styles.status}>
-          {connected ? '● Connected to server' : '○ Connecting to server…'}
+                    {connected ? '● Connected to server' : `○ Connecting to server… (${SERVER_URL})`}
         </Muted>
       </Sheet>
     </KeyboardAvoidingView>
